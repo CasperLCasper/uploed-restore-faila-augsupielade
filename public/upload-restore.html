@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload uz Arweave</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 40px auto; 
+            padding: 20px; 
+            background: #0d1117;
+            color: #e6edf3;
+        }
+        .container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 30px;
+        }
+        h1 { 
+            font-size: 24px; 
+            margin-bottom: 20px;
+            color: #79c0ff;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            margin-bottom: 16px;
+        }
+        button { 
+            padding: 12px 24px; 
+            font-size: 16px; 
+            cursor: pointer;
+            background: linear-gradient(135deg, #238636 0%, #1a7f37 50%, #238636 100%);
+            color: #fff;
+            border: 1px solid rgba(63, 185, 80, 0.3);
+            border-radius: 8px;
+            width: 100%;
+        }
+        button:disabled {
+            background: #30363d;
+            color: #8b949e;
+            cursor: not-allowed;
+        }
+        .status { 
+            margin-top: 20px; 
+            padding: 10px; 
+            word-break: break-all;
+        }
+        .success { color: #3fb950; }
+        .error { color: #f85149; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 Upload failu uz Arweave</h1>
+        
+        <input type="file" id="fileInput" accept=".html">
+        
+        <button id="uploadBtn">Augšupielādēt</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('uploadBtn').addEventListener('click', async function() {
+            const statusEl = document.getElementById('status');
+            const button = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                statusEl.textContent = '❌ Izvēlies failu!';
+                statusEl.className = 'status error';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            button.disabled = true;
+            statusEl.textContent = '⏳ Augšupielādē...';
+            statusEl.className = 'status';
+            
+            try {
+                const fileBuffer = await file.arrayBuffer();
+                const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+                
+                const response = await fetch('/api/upload-restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileContent: base64 })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusEl.textContent = '✅ TX ID: ' + result.txId + '\n\nURL: https://ar-io.dev/' + result.txId;
+                    statusEl.className = 'status success';
+                } else {
+                    statusEl.textContent = '❌ ' + (result.error || 'Kļūda');
+                    statusEl.className = 'status error';
+                }
+                
+            } catch (e) {
+                console.error('Kļūda:', e);
+                statusEl.textContent = '❌ ' + e.message;
+                statusEl.className = 'status error';
+            } finally {
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
