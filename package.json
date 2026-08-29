@@ -1,0 +1,12 @@
+{
+  "name": "upload-restore",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server-upload.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@ardrive/turbo-sdk": "latest"
+  }
+}
