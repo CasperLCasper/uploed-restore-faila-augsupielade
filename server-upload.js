@@ -14,6 +14,7 @@ const RESTORE_PAGE_PRIVATE_KEY = process.env.RESTORE_PAGE_PRIVATE_KEY;
 const TURBO_TOKEN = process.env.TURBO_TOKEN || 'base-eth';
 const TURBO_UPLOAD_URL = process.env.TURBO_UPLOAD_URL || 'https://upload.services.ar-io.dev';
 const TURBO_PAYMENT_URL = process.env.TURBO_PAYMENT_URL || 'https://payment.services.ar-io.dev';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'https://sepolia.base.org';
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -24,7 +25,7 @@ app.post('/api/upload-restore', async (req, res) => {
             return res.status(500).json({ success: false, error: 'RESTORE_PAGE_PRIVATE_KEY nav konfigurēts' });
         }
         
-        const { fileContent } = req.body;
+        const { fileName, fileContent } = req.body;
         if (!fileContent) {
             return res.status(400).json({ success: false, error: 'Nav faila satura' });
         }
@@ -32,12 +33,27 @@ app.post('/api/upload-restore', async (req, res) => {
         const turbo = TurboFactory.authenticated({
             signer: new EthereumSigner(RESTORE_PAGE_PRIVATE_KEY),
             token: TURBO_TOKEN,
-            gatewayUrl: 'https://sepolia.base.org',
+            gatewayUrl: GATEWAY_URL,
             uploadServiceConfig: { url: TURBO_UPLOAD_URL },
             paymentServiceConfig: { url: TURBO_PAYMENT_URL }
         });
         
         const fileBuffer = Buffer.from(fileContent, 'base64');
+        
+        // Nosaka Content-Type
+        let contentType = 'text/html';
+        let fileType = 'restore-page';
+        
+        if (fileName === 'manifest.json') {
+            contentType = 'application/x.arweave-manifest+json';
+            fileType = 'path-manifest';
+        } else if (fileName.endsWith('.css')) {
+            contentType = 'text/css';
+            fileType = 'style';
+        } else if (fileName.endsWith('.js')) {
+            contentType = 'application/javascript';
+            fileType = 'script';
+        }
         
         const result = await turbo.uploadFile({
             fileStreamFactory: () => Readable.from(fileBuffer),
@@ -45,8 +61,8 @@ app.post('/api/upload-restore', async (req, res) => {
             dataItemOpts: {
                 tags: [
                     { name: 'App-Name', value: 'PermRepo' },
-                    { name: 'Type', value: 'restore-page' },
-                    { name: 'Content-Type', value: 'text/html' },
+                    { name: 'Type', value: fileType },
+                    { name: 'Content-Type', value: contentType },
                     { name: 'Title', value: 'PermRepo Restore' }
                 ]
             }
