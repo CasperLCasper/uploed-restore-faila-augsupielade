@@ -2,94 +2,226 @@
 <html lang="lv">
 <head>
     <meta charset="UTF-8">
-    <title>Upload uz Arweave</title>
+    <title>PermRepo Restore — Upload</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body { 
-            font-family: Arial, sans-serif; 
-            max-width: 600px; 
-            margin: 40px auto; 
-            padding: 20px; 
-            background: #0d1117;
-            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            max-width: 640px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0a0e14;
+            color: #f0f3f6;
+            min-height: 100vh;
         }
+
         .container {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
+
         h1 { 
-            font-size: 24px; 
-            margin-bottom: 20px;
-            color: #79c0ff;
+            font-size: 24px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #58a6ff 0%, #79c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
         }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
         .drop-zone {
-            border: 2px dashed #30363d;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
             border-radius: 12px;
-            padding: 40px;
+            padding: 40px 20px;
             text-align: center;
             margin-bottom: 16px;
-            transition: all 0.3s;
+            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
         }
+
         .drop-zone.dragover {
-            border-color: #79c0ff;
-            background: rgba(121, 192, 255, 0.1);
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.08);
         }
+
         .drop-zone p {
-            color: #8b949e;
-            font-size: 16px;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 15px;
             margin: 0;
         }
+
+        .drop-zone p.hint {
+            font-size: 12px;
+            margin-top: 8px;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
         .file-list {
             margin-bottom: 16px;
+            max-height: 300px;
+            overflow-y: auto;
         }
+
         .file-item {
-            padding: 8px;
-            background: #0d1117;
-            border: 1px solid #30363d;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
             margin-bottom: 8px;
-            color: #e6edf3;
+            color: #f0f3f6;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 14px;
         }
-        button { 
-            padding: 12px 24px; 
-            font-size: 16px; 
+
+        .file-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+        }
+
+        .file-item-size {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .file-item-remove {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            background: rgba(248, 81, 73, 0.15);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            border-radius: 6px;
+            color: #f85149;
             cursor: pointer;
-            background: linear-gradient(135deg, #238636 0%, #1a7f37 50%, #238636 100%);
-            color: #fff;
-            border: 1px solid rgba(63, 185, 80, 0.3);
-            border-radius: 8px;
-            width: 100%;
+            flex-shrink: 0;
+            font-size: 14px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        button:disabled {
-            background: #30363d;
-            color: #8b949e;
+
+        .file-item-remove:hover {
+            background: rgba(248, 81, 73, 0.25);
+        }
+
+        button.upload-btn { 
+            padding: 14px;
+            font-size: 15px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            width: 100%;
+            font-weight: 600;
+            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button.upload-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(63, 185, 80, 0.25);
+        }
+
+        button.upload-btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.35);
             cursor: not-allowed;
         }
+
         .status { 
-            margin-top: 20px; 
-            padding: 10px; 
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 12px;
             word-break: break-all;
             white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.6;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            display: none;
         }
-        .success { color: #3fb950; }
-        .error { color: #f85149; }
+
+        .status.success {
+            display: block;
+            color: #3fb950;
+            background: rgba(63, 185, 80, 0.05);
+            border: 1px solid rgba(63, 185, 80, 0.2);
+        }
+
+        .status.error {
+            display: block;
+            color: #f85149;
+            background: rgba(248, 81, 73, 0.05);
+            border: 1px solid rgba(248, 81, 73, 0.15);
+        }
+
+        .status.progress {
+            display: block;
+            color: #f0f3f6;
+            background: rgba(88, 166, 255, 0.05);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+
+        .status a {
+            color: #58a6ff;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .status a:hover {
+            text-decoration: underline;
+        }
+
+        .manifest-link {
+            display: block;
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 8px;
+            color: #58a6ff;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📤 Upload failus uz Arweave</h1>
+        <h1>📤 PermRepo Restore — Upload</h1>
+        <p class="subtitle">Ievelc visus failus un tie tiks augšupielādēti Arweave ar automātisku manifestu</p>
         
         <div class="drop-zone" id="dropZone">
             <p>📁 Ievelc failus šeit</p>
-            <p style="font-size: 12px; margin-top: 8px;">vai noklikšķini, lai izvēlētos</p>
-            <input type="file" id="fileInput" multiple accept=".html,.css,.js" style="display: none;">
+            <p class="hint">vai noklikšķini, lai izvēlētos</p>
+            <input type="file" id="fileInput" multiple accept=".html,.css,.js,.svg,.json,.png,.jpg,.jpeg,.woff,.woff2,.ttf" style="display: none;">
         </div>
         
         <div class="file-list" id="fileList"></div>
         
-        <button id="uploadBtn" disabled>Augšupielādēt un izveidot manifestu</button>
+        <button id="uploadBtn" class="upload-btn" disabled>Augšupielādēt uz Arweave</button>
         
         <div id="status" class="status"></div>
     </div>
@@ -101,6 +233,7 @@
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
         const uploadBtn = document.getElementById('uploadBtn');
+        const statusEl = document.getElementById('status');
         
         dropZone.addEventListener('click', () => fileInput.click());
         
@@ -127,7 +260,14 @@
         });
         
         function addFiles(files) {
-            selectedFiles = [...selectedFiles, ...files];
+            // Izvairās no dublikātiem pēc nosaukuma
+            const existingNames = new Set(selectedFiles.map(f => f.name));
+            for (const file of files) {
+                if (!existingNames.has(file.name)) {
+                    selectedFiles.push(file);
+                    existingNames.add(file.name);
+                }
+            }
             updateFileList();
         }
         
@@ -142,18 +282,32 @@
             selectedFiles.forEach((file, index) => {
                 const div = document.createElement('div');
                 div.className = 'file-item';
-                div.innerHTML = '📄 ' + file.name + ' (' + formatBytes(file.size) + ') ' +
-                    '<button onclick="removeFile(' + index + ')" style="width: auto; padding: 4px 8px; margin: 0; background: #f85149; border: none; border-radius: 4px; cursor: pointer;">✕</button>';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'file-item-name';
+                nameSpan.textContent = '📄 ' + file.name;
+                
+                const sizeSpan = document.createElement('span');
+                sizeSpan.className = 'file-item-size';
+                sizeSpan.textContent = formatBytes(file.size);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'file-item-remove';
+                removeBtn.textContent = '✕';
+                removeBtn.type = 'button';
+                removeBtn.onclick = () => {
+                    selectedFiles.splice(index, 1);
+                    updateFileList();
+                };
+                
+                div.appendChild(nameSpan);
+                div.appendChild(sizeSpan);
+                div.appendChild(removeBtn);
                 fileList.appendChild(div);
             });
             
             uploadBtn.disabled = false;
         }
-        
-        window.removeFile = function(index) {
-            selectedFiles.splice(index, 1);
-            updateFileList();
-        };
         
         function formatBytes(bytes) {
             if (bytes < 1024) return bytes + ' B';
@@ -161,97 +315,86 @@
             return (bytes / 1024 / 1024).toFixed(2) + ' MB';
         }
         
+        // Droša base64 konvertācija, kas strādā ar jebkura izmēra failiem
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const base64 = dataUrl.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = () => reject(new Error('Neizdevās nolasīt failu: ' + file.name));
+                reader.readAsDataURL(file);
+            });
+        }
+        
         uploadBtn.addEventListener('click', async function() {
             if (selectedFiles.length === 0) return;
             
-            const statusEl = document.getElementById('status');
-            const button = uploadBtn;
-            
-            button.disabled = true;
-            statusEl.textContent = '⏳ Augšupielādē ' + selectedFiles.length + ' failus...';
-            statusEl.className = 'status';
+            uploadBtn.disabled = true;
+            statusEl.className = 'status progress';
+            statusEl.textContent = '⏳ Sagatavo ' + selectedFiles.length + ' failus...';
             
             try {
-                const uploadResults = [];
-                
-                // 1. Augšupielādē visus failus
+                // 1. Sagatavo visus failus kā base64
+                const files = [];
                 for (let i = 0; i < selectedFiles.length; i++) {
                     const file = selectedFiles[i];
-                    statusEl.textContent = '⏳ Augšupielādē ' + (i + 1) + '/' + selectedFiles.length + ': ' + file.name + '...';
+                    statusEl.textContent = '⏳ Nolasa ' + (i + 1) + '/' + selectedFiles.length + ': ' + file.name + '...';
                     
-                    const fileBuffer = await file.arrayBuffer();
-                    const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
-                    
-                    const response = await fetch('/api/upload-restore', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            fileName: file.name,
-                            fileContent: base64 
-                        })
+                    const content = await fileToBase64(file);
+                    files.push({
+                        name: file.name,
+                        content: content
                     });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        uploadResults.push({ name: file.name, txId: result.txId });
-                    } else {
-                        throw new Error(result.error || 'Kļūda ar ' + file.name);
-                    }
                 }
                 
-                // 2. Izveido manifestu
-                statusEl.textContent = '📦 Veido manifestu...';
+                // 2. Augšupielādē visu uzreiz uz /api/upload-bundle
+                statusEl.textContent = '⏳ Augšupielādē ' + files.length + ' failus uz Arweave...\n\nŠis var aizņemt 30-60 sekundes.';
                 
-                const manifest = {
-                    manifest: 'arweave/paths',
-                    version: '0.1.0',
-                    index: { path: 'restore.html' },
-                    paths: {}
-                };
-                
-                for (const r of uploadResults) {
-                    manifest.paths[r.name] = { id: r.txId };
-                }
-                
-                const manifestBuffer = new TextEncoder().encode(JSON.stringify(manifest));
-                const manifestBase64 = btoa(String.fromCharCode(...manifestBuffer));
-                
-                const manifestResponse = await fetch('/api/upload-restore', {
+                const response = await fetch('/api/upload-bundle', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        fileName: 'manifest.json',
-                        fileContent: manifestBase64 
-                    })
+                    body: JSON.stringify({ files })
                 });
                 
-                const manifestResult = await manifestResponse.json();
+                const result = await response.json();
                 
-                if (!manifestResult.success) {
-                    throw new Error(manifestResult.error || 'Manifesta kļūda');
+                if (!result.success) {
+                    throw new Error(result.error || 'Augšupielādes kļūda');
                 }
                 
-                let resultText = '✅ Augšupielādēti faili:\n\n';
-                for (const r of uploadResults) {
-                    resultText += '📄 ' + r.name + '\n' + r.txId + '\n\n';
-                }
-                
-                resultText += '📦 MANIFEST TX ID: ' + manifestResult.txId + '\n\n';
-                resultText += '🌐 URL: https://ar-io.dev/' + manifestResult.txId;
-                
-                statusEl.textContent = resultText;
+                // 3. Parāda rezultātu
                 statusEl.className = 'status success';
+                statusEl.innerHTML = '';
                 
+                const successText = document.createElement('div');
+                successText.textContent = '✅ Augšupielāde pabeigta!\n\n' +
+                    'Faili: ' + result.fileCount + '\n' +
+                    'Index: ' + result.index + '\n' +
+                    'Kopējais izmērs: ' + formatBytes(result.totalBytes) + '\n\n' +
+                    '📦 Manifest TX ID:\n' + result.manifestTxId;
+                statusEl.appendChild(successText);
+                
+                const linkEl = document.createElement('a');
+                linkEl.className = 'manifest-link';
+                linkEl.href = 'https://ar-io.dev/' + result.manifestTxId;
+                linkEl.target = '_blank';
+                linkEl.rel = 'noopener noreferrer';
+                linkEl.textContent = '🌐 Atvērt: https://ar-io.dev/' + result.manifestTxId;
+                statusEl.appendChild(linkEl);
+                
+                // Notīra failu sarakstu
                 selectedFiles = [];
                 updateFileList();
                 
             } catch (e) {
                 console.error('Kļūda:', e);
-                statusEl.textContent = '❌ ' + e.message;
                 statusEl.className = 'status error';
+                statusEl.textContent = '❌ ' + (e.message || String(e));
             } finally {
-                button.disabled = false;
+                uploadBtn.disabled = false;
             }
         });
     </script>
